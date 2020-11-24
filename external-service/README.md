@@ -1,73 +1,101 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo_text.svg" width="320" alt="Nest Logo" /></a>
-</p>
+# External Services with Nest.js
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This repository is an example of integrating external HTTP services with your
+Nest.js application and how to properly test those components at different
+layers.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+To demonstrate HTTP connectivity, it relies on the [Postman Echo][1] service to
+simply echo back any GET requests it receives.
 
-## Description
+## Setup
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Since there's no persistence layer required, installation and startup is simple:
 
-## Installation
-
-```bash
-$ npm install
+```
+$ yarn && yarn start
 ```
 
-## Running the app
+Making a GET request with [cURL][2] will echo back the parameters in the query
+string provided:
 
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```
+$ curl -s "http://localhost:3000/?key=value" | python -m json.tool
+{
+    "args": {
+        "key": "value"
+    },
+    "headers": {
+        "accept": "application/json, text/plain, */*",
+        "host": "postman-echo.com",
+        "user-agent": "axios/0.21.0",
+        "x-amzn-trace-id": "Root=1-5fbe7898-288d4d534867c48479b7e115",
+        "x-forwarded-port": "443",
+        "x-forwarded-proto": "https"
+    },
+    "url": "https://postman-echo.com/get?key=value"
+}
 ```
 
-## Test
+_(Check out [jq][3] for an improved alternative for formatting response output)_
 
-```bash
-# unit tests
-$ npm run test
+## Running Tests
 
-# e2e tests
-$ npm run test:e2e
+This repository contains both isolated and end-to-end tests for the application,
+run them with:
 
-# test coverage
-$ npm run test:cov
+```
+$ yarn test && yarn test:e2e
 ```
 
-## Support
+## Project Structure
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```
+.
+├── src
+│   ├── app.controller.ts
+│   ├── app.module.ts
+│   ├── config.ts
+│   ├── echo.client.spec.ts
+│   ├── echo.client.ts
+│   ├── main.ts
+│   └── types.ts
+└── test
+    ├── app.e2e-spec.ts
+    ├── jest-e2e.json
+    └── support
+        ├── echo-client.fake.ts
+        └── http-service.fake.ts
+```
 
-## Stay in touch
+## Key Components
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### Implementation
 
-## License
+- `echo.client.ts` - Client wrapper for connecting to the Postman Echo
+  service
+- `app.controller.ts` - Main controller that exposes the single route of the
+  application
+- `types.ts` - Types used for external requests and the interface definition
+  for injecting the proper client service instance
 
-Nest is [MIT licensed](LICENSE).
+### Testing
+
+- `http-service.fake.ts` - Helper to create a fake [`HttpService`][4] instance
+  that relies on the [`AxiosMockAdapter`][5] adapter instance for [`Axios`][6].
+  This allows mocking out low-level HTTP interactions
+- `echo.client.spec.ts` - Isolated tests for the `EchoClient` that rely on
+  the `HttpService` fake to test behavior
+- `echo-client.fake.ts` - A fake `EchoClient` instance that can be
+  used when performing end-to-end tests. It adheres to the common interface
+  (defined in `types.ts`) and provides a helper method for returning canned
+  responses
+- `app.e2e-spec.ts` - End-to-end tests of the single exposed endpoint that
+  disallow external HTTP connections and instead swap in the fake client to
+  provide a full testing spike through the system
+
+[1]: https://docs.postman-echo.com/
+[2]: https://curl.se/
+[3]: https://stedolan.github.io/jq/
+[4]: https://docs.nestjs.com/techniques/http-module
+[5]: https://www.npmjs.com/package/axios-mock-adapter
+[6]: https://www.npmjs.com/package/axios

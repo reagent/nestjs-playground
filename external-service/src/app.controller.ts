@@ -1,12 +1,15 @@
-import { Controller, Get } from '@nestjs/common';
-import { AppService } from './app.service';
+import { Controller, Get, Inject, Query } from '@nestjs/common';
+import { EchoClient } from './echo.client';
+import { EchoResponse, ECHO_SERVICE_CLIENT, Params } from './types';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    @Inject(ECHO_SERVICE_CLIENT) private readonly client: EchoClient,
+  ) {}
 
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  echo(@Query() params?: Params): Promise<EchoResponse> {
+    return this.client.get(params);
   }
 }

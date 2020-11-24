@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common';
+import { HttpModule, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { EchoClient } from './echo.client';
+import { ECHO_SERVICE_CLIENT } from './types';
 
 @Module({
-  imports: [],
+  imports: [HttpModule],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [{ provide: ECHO_SERVICE_CLIENT, useClass: EchoClient }],
 })
 export class AppModule {}
